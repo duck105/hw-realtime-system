@@ -54,6 +54,32 @@ s = sched_setscheduler(0, SCHED_FIFO, &param);
 printf("Thread %d sched after %s\n", mid, strerror(errno));
 ```
 
-由於一次 create 數個 pthread 出來，他們被創建後才能進行 `sched_setscheduler()`，所以他們之間會發生突然間的交錯，因為有些在 `sched_setscheduler()` 之前可能被 context switch 到另一個 pthread X 上，導致另一個 pthread X 比較晚被 create 並順利地跑完 setcheduler 跑到要印出的片段，隨後才被其他的 pthread context switch 過去。
+由於一次 create 數個 pthread 出來，他們被創建後才能進行 `sched_setscheduler()`，所以他們之間會發生突然間的交錯，因為有些在 `sched_setscheduler()` 之前可能被 context switch 到另一個 pthread X 上，導致另一個 pthread X 比較晚被 create 並順利地跑完 setscheduler 跑到要印出的片段，隨後才被其他的 pthread context switch 過去。
 
+為了解決這問題，使用 `pthread_barrier_t` 來設定障礙物，使得所有的 pthread 都抵達那一行才開始跑下一個 block，呼叫 `pthread_barrier_init()` 來告知有多少個 barrier 會被使用，每一個 pthread 都會執行一次 `pthread_barrier_wait(&barrier)` 並且將 barrier 計數器減少一，最後進入等待 barrier 中的計數器小於等於零。
+
+```
+pthread_barrier_t barrier; // global variable
+
+void *running_print(void *arg) {
+	// setting pthread config ...
+	pthread_barrier_wait(&barrier);
+	// running block ...
+}
+
+int main() {
+	// ...
+	pthread_barrier_init(&barrier, NULL, MAX_THREAD);
+	for (int i = 0; i < MAX_THREAD; i++) {
+        // ...
+        pthread_create(&tid[i], NULL, running_print, create_arg(i+1, scheduler));
+        // ...
+    }
+    // ...
+}
+```
+
+### Other ####
+
+如果發生 pthread 印出自己寫的 argument 有問題時，通常會是把 argument 寫在 main function 的 local variable 中導致，又沒有加上 `pthread_joint(tid[i], NULL)`，最後 main function 提早結束，但是 pthread 仍繼續執行，最後取址的變數在 stack 被改寫掉的緣故。
 
