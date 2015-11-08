@@ -1,12 +1,27 @@
 ## README ##
 
-### Ubuntu vim env ###
+### Ubuntu env ###
 
-path : `etc/vim/vimrc`
+#### vimrc ###
+
+path : `/etc/vim/vimrc`
 
 ```
 set tabstop=4
 set nu
+```
+
+#### git ####
+
+path :`~/.gitconfig`
+```
+[color]
+  diff = auto
+  status = auto
+  branch = auto
+  interactive = auto
+  ui = true
+  pager = true
 ```
 
 ### Program ###
@@ -14,11 +29,19 @@ set nu
 #### Compiler & Run ####
 
 ```
-$ gcc sched_test.cpp -lpthread
-$ sudo ./a.out
+$ gcc sched_test.cpp -lpthread -o sched_test.out
+$ sudo ./sched_test.out
+$ sudo ./sched_test.out SCHED_FIFO
 ```
 
-if you call `sched.h`, need root privilege to execute it.
+or,
+
+```
+$ make
+$ make run
+```
+
+if you call `sched.h` & use `SCHED_FIFO` scheduler, need root privilege to execute it.
 
 #### Pthread ####
 
