@@ -7,6 +7,7 @@
  * Update the current task's runtime statistics. Skip current tasks that
  * are not in our scheduling class.
  */
+// #define MORRISDEBUG
 static void update_curr_weighted_rr(struct rq *rq)
 {
 	struct task_struct *curr = rq->curr;
@@ -29,30 +30,39 @@ static void update_curr_weighted_rr(struct rq *rq)
 /*
  * Adding/removing a task to/from a priority array:
  */
+#define for_each_sched_wrr_entity(pos, head) \
+	for (pos = (head)->next; pos != head; pos = pos->next)
+
 static void enqueue_task_weighted_rr(struct rq *rq, struct task_struct *p, int wakeup, bool b)
 {
-	
 	// not yet implemented
-	struct sched_rt_entity *rt_se = &p->rt;
-
-	if (wakeup)
-		rt_se->timeout = 0;
-
-	enqueue_rt_entity(rt_se, head);
-
-	if (!task_current(rq, p) && p->rt.nr_cpus_allowed > 1)
-		enqueue_pushable_task(rq, p);
-
+#ifdef MORRISDEBUG
+	printk("enqueue task weighted rr BEGIN %d\n", rq->weighted_rr.nr_running);
+#endif
+	list_add_tail(&(p->weighted_rr_list_item), &(rq->weighted_rr.queue));
+	rq->weighted_rr.nr_running++;
+#ifdef MORRISDEBUG
+	printk("enqueue task weighted rr END %d\n", rq->weighted_rr.nr_running);
+#endif
 	// ...
+
 }
 
 static void dequeue_task_weighted_rr(struct rq *rq, struct task_struct *p, int sleep)
 {
 	// first update the task's runtime statistics
+#ifdef MORRISDEBUG
+	printk("dequeue_task_weighted_rr BEGIN\n");
+	printk("dequeue_task_weighted_rr call update_curr_weighted_rr");
+#endif
 	update_curr_weighted_rr(rq);
 	// not yet implemented
-
+	list_del(&(p->weighted_rr_list_item));
+	rq->weighted_rr.nr_running--;
 	// ...
+#ifdef MORRISDEBUG
+	printk("dequeue_task_weight_rr END\n");
+#endif
 }
 
 /*
@@ -71,8 +81,14 @@ static void
 yield_task_weighted_rr(struct rq *rq)
 {
 	// not yet implemented
-
+#ifdef MORRISDEBUG
+	printk("yield_task_weighted_rr BEGIN\n");
+#endif
+	requeue_task_weighted_rr(rq, rq->curr);
 	// ...
+#ifdef MORRISDEBUG
+	printk("yield_task_weighted_rr END\n");
+#endif
 }
 
 /*
@@ -91,14 +107,30 @@ static struct task_struct *pick_next_task_weighted_rr(struct rq *rq)
 	struct task_struct *next;
 	struct list_head *queue;
 	struct weighted_rr_rq *weighted_rr_rq;
-	
-	
-	// not yet implemented
 
+	// not yet implemented	
+#ifdef MORRISDEBUG
+	if ((testcase++)%10000 == 0)
+		printk("pick_next_task_weighted_rr running %d\n", rq->weighted_rr.nr_running);
+#endif
+	weighted_rr_rq = &(rq->weighted_rr);
+	queue = &(rq->weighted_rr).queue;
+	if (list_empty(queue))
+		return NULL;
+//	if (unlikely(weighted_rr_rq->nr_running == 0))
+//		return NULL;
+#ifdef MORRISDEBUG
+	printk("pick_next_task_weighted_rr BEGIN\n");
+#endif
+	next = list_first_entry(queue, struct task_struct, weighted_rr_list_item);
+	next->se.exec_start = rq->clock;
+#ifdef MORRISDEBUG
+	printk("pick_next_task_weighted_rr END\n");
+#endif
 	// ...
 	
 	/* you need to return the selected task here */
-	return NULL;
+	return next;
 }
 
 static void put_prev_task_weighted_rr(struct rq *rq, struct task_struct *p)
@@ -188,14 +220,38 @@ move_one_task_weighted_rr(struct rq *this_rq, int this_cpu, struct rq *busiest,
  */
 static void task_tick_weighted_rr(struct rq *rq, struct task_struct *p,int queued)
 {
-	struct task_struct *curr;
-	struct weighted_rr_rq *weighted_rr_rq;
-	
 	// first update the task's runtime statistics
 	update_curr_weighted_rr(rq);
 
-	// not yet implemented
+//	if (weighted_rr_time_slice == 0) {
+//		return;
+//	}
 
+	// not yet implemented
+//	if (p->policy != SCHED_WEIGHTED_RR) {
+#ifdef MORRISDEBUG
+		printk("NOT SCHED_WEIGHTED_RR\n");
+#endif
+//		return;
+//	
+	
+//	printk("task tick p %p %d\n", p, p->weighted_time_slice);
+	if (p->task_time_slice) {
+		if (--p->task_time_slice)
+			return;
+	}
+#ifdef MORRISDEBUG
+	printk("task_tick_weight_rr BEGIN\n");
+#endif
+	p->task_time_slice = p->weighted_time_slice;
+#ifdef MORRISDEBUG
+		printk("task_tick_weight_rr call requeue_task_weighted_rr\n");
+#endif
+	set_tsk_need_resched(p);
+	requeue_task_weighted_rr(rq, p);
+#ifdef MORRISDEBUG
+	printk("task_tick_weight_rr END\n");
+#endif
 	// ...
 	 
 	return;	
