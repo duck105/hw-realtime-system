@@ -8,6 +8,8 @@
  * are not in our scheduling class.
  */
 // #define MORRISDEBUG
+// #define MORRIS_WEIGHTED_RR
+#define MORRIS_SJF
 static void update_curr_weighted_rr(struct rq *rq)
 {
 	struct task_struct *curr = rq->curr;
@@ -39,8 +41,40 @@ static void enqueue_task_weighted_rr(struct rq *rq, struct task_struct *p, int w
 #ifdef MORRISDEBUG
 	printk("enqueue task weighted rr BEGIN %d\n", rq->weighted_rr.nr_running);
 #endif
+
+#ifdef MORRIS_WEIGHTED_RR
 	list_add_tail(&(p->weighted_rr_list_item), &(rq->weighted_rr.queue));
 	rq->weighted_rr.nr_running++;
+#endif
+
+#ifdef MORRIS_SJF
+	struct list_head *head = &(rq->weighted_rr.queue);
+	struct list_head *pos;
+	struct task_struct *task;
+
+	if (head->next == head) {
+		list_add_tail(&(p->weighted_rr_list_item), &(rq->weighted_rr.queue));
+		rq->weighted_rr.nr_running++;
+		return ;
+	}
+
+	// insert sort
+	for (pos = head->next; pos != head; pos = pos->next) {
+		task = list_entry(pos, struct task_struct, weighted_rr_list_item);
+		if (task->weighted_time_slice >= p->weighted_time_slice) {
+			list_add(&(p->weighted_rr_list_item), pos->prev);
+			rq->weighted_rr.nr_running++;
+			return ;
+		}
+
+	}
+	if (pos == head) {
+		list_add_tail(&(p->weighted_rr_list_item), head);
+		rq->weighted_rr.nr_running++;
+		return ;
+	}
+#endif
+
 #ifdef MORRISDEBUG
 	printk("enqueue task weighted rr END %d\n", rq->weighted_rr.nr_running);
 #endif
@@ -71,7 +105,14 @@ static void dequeue_task_weighted_rr(struct rq *rq, struct task_struct *p, int s
  */
 static void requeue_task_weighted_rr(struct rq *rq, struct task_struct *p)
 {
+#ifdef MORRIS_WEIGHTED_RR
 	list_move_tail(&p->weighted_rr_list_item, &rq->weighted_rr.queue);
+#endif
+
+#ifdef MORRIS_SJF
+	dequeue_task_weighted_rr(rq, p, 0);
+	enqueue_task_weighted_rr(rq, p, 0, false);
+#endif
 }
 
 /*
@@ -109,16 +150,10 @@ static struct task_struct *pick_next_task_weighted_rr(struct rq *rq)
 	struct weighted_rr_rq *weighted_rr_rq;
 
 	// not yet implemented	
-#ifdef MORRISDEBUG
-	if ((testcase++)%10000 == 0)
-		printk("pick_next_task_weighted_rr running %d\n", rq->weighted_rr.nr_running);
-#endif
 	weighted_rr_rq = &(rq->weighted_rr);
 	queue = &(rq->weighted_rr).queue;
 	if (list_empty(queue))
 		return NULL;
-//	if (unlikely(weighted_rr_rq->nr_running == 0))
-//		return NULL;
 #ifdef MORRISDEBUG
 	printk("pick_next_task_weighted_rr BEGIN\n");
 #endif
