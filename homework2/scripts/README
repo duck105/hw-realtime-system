@@ -1,0 +1,14 @@
+Files:
+ - run.sh
+ - bzImage: x86-64 kernel with LKM disabled
+ - rootfs.ext4
+ - rootfs-enlarged.ext4
+ - br_config: buildroot-2015.08.1 config used to generate the rootfs
+ - README
+
+
+How to enlarge the rootfs.ext4
+http://stackoverflow.com/questions/3495854/extend-the-size-of-already-existing-ext2-image
+$ dd if=/dev/zero of=foo.img count=0 bs=1M seek=2000   # assuming target size is 2000M
+# e2fsck -f foo.img
+# resize2fs foo.img 
