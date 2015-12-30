@@ -1,34 +1,101 @@
 ## README ##
 
 
-Files:
-
-- run.sh
-- bzImage: x86-64 kernel with LKM disabled
-- rootfs.ext4
-- rootfs-enlarged.ext4
-- br_config: buildroot-2015.08.1 config used to generate the rootfs
-- README
-
-### linux kernel build config ###
-
-路徑 `linux-2.6.32.60/arch/x86/Kconfig` 更動，原則上修改以下幾點 `make menuconfig` 開啟後，把主要要測試核心程式碼編譯設定即可，可在十分鐘內完成。修改 kernel code 後，下達 `make -j8` 接著 `sh run.sh` 開啟 qemu 測試，若要掛載一些執行檔案進去測試，請先編譯，再使用 `sh mnt.sh` 將執行檔案丟入 `rootfs-ext4`。
-
-
+### Ubuntu Environment ###
 
 ```
-() Enable loadable module support -->
+$ sudo apt-get install qemu-system
+$ sudo apt-get install libncurses5-dev
+```
+
+### Buildroot ###
+
+[site](https://buildroot.uclibc.org/download.html)
+
+```
+$ wget https://buildroot.uclibc.org/downloads/buildroot-2015.11.1.tar.bz2
+```
+
+#### Compile Config ####
+
+```
+$ make menuconfig
+```
+
+這次作業設定，由於需要改寫 kernel 版本為 2.6.32.* 左右，因此相關的 gcc 編譯器等設定如下。同時，根據機器架構設定，助教預設在 visual box 上面，通常為 i386，而我們用實驗室 server，編 x86 64。
+
+```
+Target options  --->
+	Target Architecture (x86_64)  --->
+		x86_64
+
+Toolchain  --->
+	C library (glibc)  --->
+		glibc
+	Kernel Headers (Manually specified Linux version)  --->
+		custom 2.6.x
+		2.6.32.6
+
+System configuration  --->
+	[*] Enable root login with password
+	[*] remount root filesystem read-write during boot 
+
+Filesystem images  ---> 
+	[*] ext2/3/4 root filesystem
+	[*] tar the root filesystem
+```
+
+#### Compile ####
+
+`make -j8` 用 8 個執行緒編譯，如果機器有很多個 core，那麼可以用 `make -j20` 在非常短的時間內完成。
+
+接著在 `buildroot`
+
+```
+$ make -j8
+$ cp output/image/rootfs.ext* WORKSPACE_PATH
+```
+
+### Linux kernel config  ###
+
+```
+$ make defconfig
+$ make menuconfig
 ```
 
 ```
-File systems
-	- [*] The Extended 4 (ext4) filesystem
+[_] Enable loadable module support
+
+File systems  ---> 
+	[*] Second extended fs support
+		[*] ext2
+
+Device Drivers  --->
+	Generic Driver Options  ---> 
+		[*] Create a kernel maintained /dev tmpfs (EXPERIMENTAL) 
 ```
 
+create `arch/x86/boot/bzImage`
+
 ```
-Device Drivers --->
-	Generic Driver Options -->
-		- [*] Create a kernel maintained /dev tmpfs (EXPERIMENTAL)
+$ make -j20
+```
+
+### Test Flow ###
+
+#### move test execute file ####
+
+`mnt.sh`
+
+```
+sudo mount rootfs.ext2 mnt
+sudo cp test_weighted_rr/test_weighted_rr mnt/root/
+sudo umount mnt
+```
+
+`run.sh`
+```
+qemu-system-x86_64 -M pc -kernel arch/x86/boot/bzImage -hda rootfs-dirty.ext4 -netdev user,id=network0 -device e1000,netdev=network0 -nographic -append "root=/dev/sda console=ttyS0"
 ```
 
 ### How to enlarge the rootfs.ext4 ###
@@ -55,7 +122,7 @@ $ screen
 開啟新的視窗，並同時切換到這個新的視窗
 * ctrl+a tab  
 切換視窗
-* ctrl+a |
+* ctrl+a |  
 切割垂直視窗，並產生新的視窗。
-* ctrl+a k
+* ctrl+a k  
 關閉此視窗
