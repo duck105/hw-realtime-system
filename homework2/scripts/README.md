@@ -14,6 +14,8 @@ $ sudo apt-get install libncurses5-dev
 
 ```
 $ wget https://buildroot.uclibc.org/downloads/buildroot-2015.11.1.tar.bz2
+$ bzip2 -d FileName.bz2
+$ tar xvf FileName.tar
 ```
 
 #### Compile Config ####

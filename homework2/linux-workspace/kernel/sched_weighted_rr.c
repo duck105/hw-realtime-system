@@ -32,9 +32,6 @@ static void update_curr_weighted_rr(struct rq *rq)
 /*
  * Adding/removing a task to/from a priority array:
  */
-#define for_each_sched_wrr_entity(pos, head) \
-	for (pos = (head)->next; pos != head; pos = pos->next)
-
 static void enqueue_task_weighted_rr(struct rq *rq, struct task_struct *p, int wakeup, bool b)
 {
 	// not yet implemented
@@ -89,11 +86,13 @@ static void dequeue_task_weighted_rr(struct rq *rq, struct task_struct *p, int s
 	printk("dequeue_task_weighted_rr BEGIN\n");
 	printk("dequeue_task_weighted_rr call update_curr_weighted_rr");
 #endif
+
 	update_curr_weighted_rr(rq);
 	// not yet implemented
 	list_del(&(p->weighted_rr_list_item));
 	rq->weighted_rr.nr_running--;
 	// ...
+	
 #ifdef MORRISDEBUG
 	printk("dequeue_task_weight_rr END\n");
 #endif
@@ -125,8 +124,10 @@ yield_task_weighted_rr(struct rq *rq)
 #ifdef MORRISDEBUG
 	printk("yield_task_weighted_rr BEGIN\n");
 #endif
+
 	requeue_task_weighted_rr(rq, rq->curr);
 	// ...
+
 #ifdef MORRISDEBUG
 	printk("yield_task_weighted_rr END\n");
 #endif
@@ -154,11 +155,14 @@ static struct task_struct *pick_next_task_weighted_rr(struct rq *rq)
 	queue = &(rq->weighted_rr).queue;
 	if (list_empty(queue))
 		return NULL;
+
 #ifdef MORRISDEBUG
 	printk("pick_next_task_weighted_rr BEGIN\n");
 #endif
+
 	next = list_first_entry(queue, struct task_struct, weighted_rr_list_item);
 	next->se.exec_start = rq->clock;
+
 #ifdef MORRISDEBUG
 	printk("pick_next_task_weighted_rr END\n");
 #endif
@@ -258,32 +262,25 @@ static void task_tick_weighted_rr(struct rq *rq, struct task_struct *p,int queue
 	// first update the task's runtime statistics
 	update_curr_weighted_rr(rq);
 
-//	if (weighted_rr_time_slice == 0) {
-//		return;
-//	}
-
 	// not yet implemented
-//	if (p->policy != SCHED_WEIGHTED_RR) {
-#ifdef MORRISDEBUG
-		printk("NOT SCHED_WEIGHTED_RR\n");
-#endif
-//		return;
-//	
 	
-//	printk("task tick p %p %d\n", p, p->weighted_time_slice);
-	if (p->task_time_slice) {
-		if (--p->task_time_slice)
-			return;
+	if (p->task_time_slice && --p->task_time_slice) {
+		return ;
 	}
+
 #ifdef MORRISDEBUG
 	printk("task_tick_weight_rr BEGIN\n");
 #endif
+
 	p->task_time_slice = p->weighted_time_slice;
+
 #ifdef MORRISDEBUG
 		printk("task_tick_weight_rr call requeue_task_weighted_rr\n");
 #endif
+
 	set_tsk_need_resched(p);
 	requeue_task_weighted_rr(rq, p);
+
 #ifdef MORRISDEBUG
 	printk("task_tick_weight_rr END\n");
 #endif
