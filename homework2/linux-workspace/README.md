@@ -86,3 +86,35 @@ struct rq {
 ### Material ###
 
 * [Linux Kernel: 強大又好用的 list_head 結構](http://blog.xuite.net/uhonda0618/linuxkernelcode/20863635-Linux+Kernel%3A+%E5%BC%B7%E5%A4%A7%E5%8F%88%E5%A5%BD%E7%94%A8%E7%9A%84list_head%E7%B5%90%E6%A7%8B)
+
+### Sample Output ###
+
+#### Weight RR ####
+
+```
+Welcome to Buildroot
+buildroot login: root
+# ls
+run.sh            test_sjf          test_weighted_rr
+# ./run.sh
+sched_policy: 6, quantum: 1, num_threads: 5, buffer_size: 5000000
+a quantum = 1
+b quantum = 2
+c quantum = 4
+d quantum = 8
+e quantum = 16
+abababcacabcdabcdeabcdeabcdeabcdabcdabcabcabcabcabcabcabcababababababababa
+```
+
+#### SJF ####
+
+```
+# ./run.sh
+sched_policy: 6, quantum: 10, num_threads: 5, buffer_size: 5000000
+a exeTime = 29
+b exeTime = 26
+c exeTime = 27
+d exeTime = 23
+e exeTime = 21
+edbca
+```
