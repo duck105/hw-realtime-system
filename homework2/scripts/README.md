@@ -40,3 +40,22 @@ $ dd if=/dev/zero of=foo.img count=0 bs=1M seek=2000   # assuming target size is
 # e2fsck -f foo.img
 # resize2fs foo.img 
 ```
+
+### Screen Workspace ###
+
+[commond tutorial](http://ssorc.tw/19)
+
+執行
+
+```
+$ screen
+```
+
+* ctrl+a c  
+開啟新的視窗，並同時切換到這個新的視窗
+* ctrl+a tab  
+切換視窗
+* ctrl+a |
+切割垂直視窗，並產生新的視窗。
+* ctrl+a k
+關閉此視窗
