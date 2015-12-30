@@ -126,3 +126,10 @@ $ screen
 切割垂直視窗，並產生新的視窗。
 * ctrl+a k  
 關閉此視窗
+
+
+### Speical Thanks ###
+
+* 蕭光宏‧蕭大帥
+* Lab 332 Parallel & Distributed Laboratory
+
