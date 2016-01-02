@@ -135,3 +135,58 @@ $ screen
 * 蕭光宏‧蕭大帥
 * Lab 332 Parallel & Distributed Laboratory
 
+## Virtual Box ##
+
+### 第一次運行 ###
+
+```
+$ cd /usr/src
+$ sudo wget http://newslab.csie.ntu.edu.tw/course/rts2015/projects/linux-2.6.32.60.tar.gz
+$ sudo tar -zxvf linux-2.6.32.60.tar.gz
+$ cd linux-2.6.32.60
+$ sudo make mrproper
+$ sudo make menuconfig
+```
+
+```
+$ scp morris1028@140.112.30.245:~/RTS/linux-2.6.32.60/arch/x86/include/asm/unistd_64.h arch/x86/include/asm/
+$ scp morris1028@140.112.30.245:~/RTS/linux-2.6.32.60/kernel/sched_weighted_rr.c kernel/
+```
+
+```
+$ sudo make bzImage
+$ sudo make modules
+$ sudo make modules_install
+$ sudo make install
+```
+
+```
+$ sudo vim /etc/default/grub
+#Add "#" to comment the following 2 lines
+#GRUB_HIDDEN_TIMEOUT=10
+#GRUB_HIDDEN_TIMEOUT_QUIET=true
+$ sudoupdate-grub2
+$ sudoshutdown -r now
+```
+
+### Test flow ###
+
+```
+$ cd /usr/src/linux-2.6.32.60
+$ sudo make bzImage
+$ sudo make modules
+$ sudo make modules_install
+$ sudo make install
+```
+
+### Debug by `printk` ###
+
+在另一個 terminal 開啟以下代碼，並且等待執行測試 scheduler 得執行檔在 kernel 運行時所打印出的 `printk` 訊息。
+
+```
+$ sudo more /proc/kmsg
+```
+
+### 已知問題 ###
+
+測試代碼會在 `sched_setscheduler()` 沒有回應，但在 qemu 版本測試下沒有問題。
