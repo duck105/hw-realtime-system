@@ -75,6 +75,7 @@ File systems  --->
 Device Drivers  --->
 	Generic Driver Options  ---> 
 		[*] Create a kernel maintained /dev tmpfs (EXPERIMENTAL) 
+		[*] Automount devtmpfs at /dev 
 ```
 
 create `arch/x86/boot/bzImage`
