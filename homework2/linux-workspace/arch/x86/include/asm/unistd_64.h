@@ -666,7 +666,10 @@ __SYSCALL(__NR_perf_event_open, sys_perf_event_open)
 __SYSCALL(__NR_sched_weighted_rr_getquantum, sys_sched_weighted_rr_getquantum)
 #define __NR_sched_weighted_rr_setquantum	338
 __SYSCALL(__NR_sched_weighted_rr_setquantum, sys_sched_weighted_rr_setquantum)
-
+#define __NR_sched_RMS_getperiod	339
+__SYSCALL(__NR_sched_RMS_getperiod, sys_sched_RMS_getperiod)
+#define __NR_sched_RMS_setperiod	340
+__SYSCALL(__NR_sched_RMS_setperiod, sys_sched_RMS_setperiod)
 
 #ifndef __NO_STUBS
 #define __ARCH_WANT_OLD_READDIR

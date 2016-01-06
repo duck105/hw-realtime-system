@@ -9,7 +9,8 @@
  */
 // #define MORRISDEBUG
 // #define MORRIS_WEIGHTED_RR
-#define MORRIS_SJF
+#define MORRIS_RMS
+// #define MORRIS_SJF
 static void update_curr_weighted_rr(struct rq *rq)
 {
 	struct task_struct *curr = rq->curr;
@@ -72,6 +73,35 @@ static void enqueue_task_weighted_rr(struct rq *rq, struct task_struct *p, int w
 	}
 #endif
 
+#ifdef MORRIS_RMS
+	struct list_head *head = &(rq->weighted_rr.queue);
+	struct list_head *pos;
+	struct task_struct *task;
+
+	if (head->next == head) {
+		list_add_tail(&(p->weighted_rr_list_item), &(rq->weighted_rr.queue));
+		rq->weighted_rr.nr_running++;
+		return ;
+	}
+
+	// insert sort
+	for (pos = head->next; pos != head; pos = pos->next) {
+		task = list_entry(pos, struct task_struct, weighted_rr_list_item);
+		if (task->period >= p->period) {
+			list_add(&(p->weighted_rr_list_item), pos->prev);
+			rq->weighted_rr.nr_running++;
+			return ;
+		}
+
+	}
+	if (pos == head) {
+		list_add_tail(&(p->weighted_rr_list_item), head);
+		rq->weighted_rr.nr_running++;
+		return ;
+	}
+
+#endif
+
 #ifdef MORRISDEBUG
 	printk("enqueue task weighted rr END %d\n", rq->weighted_rr.nr_running);
 #endif
@@ -112,6 +142,11 @@ static void requeue_task_weighted_rr(struct rq *rq, struct task_struct *p)
 	dequeue_task_weighted_rr(rq, p, 0);
 	enqueue_task_weighted_rr(rq, p, 0, false);
 #endif
+
+#ifdef MORRIS_RMS
+	dequeue_task_weighted_rr(rq, p, 0);
+	enqueue_task_weighted_rr(rq, p, 0, false);
+#endif
 }
 
 /*
@@ -139,6 +174,12 @@ yield_task_weighted_rr(struct rq *rq)
  */
 static void check_preempt_curr_weighted_rr(struct rq *rq, struct task_struct *p, int wakeflags)
 {
+#ifdef MORRIS_RMS
+	if (p->period < rq->curr->period) {
+		resched_task(rq->curr);
+		return ;
+	}
+#endif
 }
 
 /*

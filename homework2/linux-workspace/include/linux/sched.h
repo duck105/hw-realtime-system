@@ -1263,7 +1263,8 @@ struct task_struct {
 	unsigned int task_time_slice;
 	//+ RTS Proj2: weighted_rr_prio
 	unsigned int weighted_time_slice;
-
+	//+ RTS Proj2: RMS
+	int period;
 #ifdef CONFIG_TREE_PREEMPT_RCU
 	int rcu_read_lock_nesting;
 	char rcu_read_unlock_special;

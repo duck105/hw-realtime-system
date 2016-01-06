@@ -345,11 +345,13 @@
 //+ RTS Proj2: weighted_rr
 #define __NR_sched_weighted_rr_getquantum	337
 #define __NR_sched_weighted_rr_setquantum	338
+#define __NR_sched_RMS_getperiod	339
+#define __NR_sched_RMS_setperiod	340
 
 #ifdef __KERNEL__
 
 //+ RTS Proj2: weighted_rr
-#define NR_syscalls 339
+#define NR_syscalls 341
 
 #define __ARCH_WANT_IPC_PARSE_VERSION
 #define __ARCH_WANT_OLD_READDIR

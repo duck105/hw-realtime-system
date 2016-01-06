@@ -145,7 +145,6 @@ static inline int task_has_weighted_rr_policy(struct task_struct *p)
 	return weighted_rr_policy(p->policy);
 }
 
-
 /*
  * This is the priority-queue data structure of the RT scheduling class:
  */
@@ -1926,6 +1925,7 @@ static void sched_irq_time_avg_update(struct rq *rq, u64 curr_irq_time) { }
 #include "sched_rt.c"
 //+ RTS Proj2: weighted_rr
 int weighted_rr_time_slice = DEF_TIMESLICE / 1000;
+int RMS_period = 0;
 #ifdef CONFIG_SCHED_DEBUG
 # include "sched_debug.c"
 #endif
@@ -2719,6 +2719,7 @@ static void __sched_fork(struct task_struct *p)
 	p->task_time_slice = weighted_rr_time_slice;
 	//+ RTS Proj2: weighted_rr_prio
 	p->weighted_time_slice = weighted_rr_time_slice;
+	p->period = RMS_period;
 }
 
 /*
@@ -7228,7 +7229,19 @@ SYSCALL_DEFINE0(sched_weighted_rr_getquantum)
 SYSCALL_DEFINE1(sched_weighted_rr_setquantum, unsigned int, quantum)
 {
 	weighted_rr_time_slice = quantum;
-	return;
+	return 0;
+}
+
+//+ RTS Proj2: RMS
+SYSCALL_DEFINE0(sched_RMS_getperiod)
+{
+	return RMS_period;
+}
+//+ RTS Proj2: RMS
+SYSCALL_DEFINE1(sched_RMS_setperiod, unsigned int, period)
+{
+	RMS_period = period;
+	return 0;
 }
 
 static const char stat_nam[] = TASK_STATE_TO_CHAR_STR;
