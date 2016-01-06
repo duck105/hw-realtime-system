@@ -11,11 +11,12 @@
 \usepackage{hyperref}
 \lstset{language=C,
 numberstyle=\footnotesize,
-basicstyle=\ttfamily\footnotesize,
+basicstyle=\large\ttfamily,
 numbers=left,
 stepnumber=1,
 frame=shadowbox,
-breaklines=true}
+breaklines=true,
+postbreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\color{red}\hookrightarrow\space}}}
 \setCJKmainfont{STHeiti} % chinese type
 %\setCJKmainfont{BiauKai}
 %\usepackage{helvetica} % uses helvetica postscript font (download helvetica.sty)
@@ -76,11 +77,9 @@ breaklines=true}
 
 特別注意到，若編譯環境為 64-bit 則需要額外修改 \lstinline{arch/x86/include/asm/unistd_64.h} 複製 \lstinline{arch/x86/include/asm/unistd_32.h} 增加的 syscall。 同理，增加自己定義的 syscall 時，需要修改 \lstinline{arch/x86} 下的那三個檔案 (如果發現編譯 kernel 時，出現 \lstinline{WARNING: syscall NOT IMPLEMENTION.} 大多數都是這個造成)。
 
-
-
 在 \lstinline{include/linux/sched.h} 中，增加 task member 提供接下來針對 task 操作需要的參數，特別的是在 \lstinline{struct sched_rt_entity;} 中，相較於一般資料結構的寫法，linux 採用倒過來將節點訊息放在資料內部中，利用 \lstinline{#define container_of(ptr, type, member)} 取得物件訊息，預計是這種特別寫法可解決 task 在數個 scheduler 中轉換。
 
-因為 syscall 的方式設定 task 的 weighted round-robin，增加一個全區變數 \lstinline{extern int weighted_rr_time_slice;}，每一次 syscall 去設定這一個全區變數值，然後 task create 後，直接利用被修改全區變數作為這一個 task weight round-robin。若要特別針對 task 設定 weighted round-robin，在 create 前都要呼叫一次 syscall。
+因為 syscall 的方式設定 task weighted，增加一個全區變數 \lstinline{int weighted_rr_time_slice;}，每一次 syscall 去設定這一個全區變數值，然後 task create 後，直接利用被修改全區變數作為這一個 task weight round-robin。若要特別針對 task 設定 weighted round-robin，在 create 前都要呼叫一次 syscall。
 
 \begin{lstlisting}[frame=single]
 struct sched_rt_entity {
@@ -107,7 +106,7 @@ extern int weighted_rr_time_slice;
 
 \begin{itemize}
 	\item	
-	\lstinline{enqueue_task_weighted_rr(struct rq *rq, struct task_struct *p, int wakeup, bool b)}
+	\lstinline{enqueue_task_weighted_rr(struct rq*, struct task_struct*, int, bool)}
 	\begin{itemize}
 		\item Weighted round-robin \\
 	函數將會給予 task 和 rq，將 task 根據 rq 的資料結構重新將 task 放入。若按照 Weighted Round-Robin \lstinline{list} 結構，直接模擬 queue 即可，由於 linux 提供 list 本身為雙向串列，直接加入尾端只需要 $\mathcal{O}(1)$ 時間。並且運行 \lstinline{rq->weighted_rr.nr_running++;} 增加 rq 中的計數，隨後用來在回報該 scheduler 中有沒有存在 task 需要運行，方便在 $\mathcal{O}(1)$ 時間內完成，由於 Weighted round-robin 只需要確認 list 是否為空，那麼也可以利用 linux 提供的 \lstinline{list_empty()} 確認。
@@ -116,19 +115,19 @@ extern int weighted_rr_time_slice;
 	\end{itemize}
 	
 	\item
-	\lstinline{dequeue_task_weighted_rr(struct rq *rq, struct task_struct *p, int sleep)} \\
+	\lstinline{dequeue_task_weighted_rr(struct rq*, struct task_struct*, int)} \\
 	\begin{itemize}
 		\item Both Weighted round-robin and Shortest Job First \\
 		當 task 完成任務時，都要呼叫 \lstinline{update_curr_weighted_rr} 進行統計運行多久，並且更新與 task 相關的排程權重。接著將 task 從 rq 串列中移除，並且更新 scheduler 的 task 計數 (\lstinline{rq->weighted_rr.nr_running--;})。時間複雜度 $\mathcal{O}(1)$
 	\end{itemize}
 	
 	\item
-	\lstinline{requeue_task_weighted_rr(struct rq *rq, struct task_struct *p)} \\
+	\lstinline{requeue_task_weighted_rr(struct rq *, struct task_struct *)} \\
 	\begin{itemize}
 		\item Weighted round-robin \\
-		將一個 task 出列，在 Weighted round-robin 只需要直接對 task p 底下的 \lstinline{weighted_rr_list_item} 移到串列最尾端，由於採用雙向串列，直接跟 rq 取得 list head (linux list 的 head 是不存放任何資訊) 直接加入尾端即可。時間複雜度 $\mathcal{O}(1)$
+		將一個 task 出列，在 Weighted round-robin 只需要直接對將 \lstinline{task.weighted_rr_list_item} 移到串列最尾端，由於採用雙向串列，直接跟 scheduler 取得 list head (linux list 的 head 是不存放任何資訊) 直接加入尾端即可。時間複雜度 $\mathcal{O}(1)$
 		\item Shortest Job First \\
-		在最短工作優先排程中，由於 task priority 會變動，不方便確定執行過一陣子的 task 要移動到哪裡，最簡單的實作方式採用 \lstinline{dequeue} 後再一次 \lstinline{enqueue}。時間複雜度 $\mathcal{O}(n)$
+		在最短工作優先排程中，由於 task 優先權會變動，不方便確定執行過一陣子的 task 要移動到哪裡，最簡單的實作方式採用 \lstinline{dequeue} 後再一次 \lstinline{enqueue}。時間複雜度 $\mathcal{O}(n)$
 	\end{itemize}
 	
 	\item
@@ -139,22 +138,45 @@ extern int weighted_rr_time_slice;
 	\end{itemize}
 	
 	\item
-	\lstinline{pick_next_task_weighted_rr(struct rq *rq)}\\
+	\lstinline{pick_next_task_weighted_rr(struct rq *)}\\
 	\begin{itemize}
 		\item Both Weighted round-robin and Shortest Job First\\
-		當最上層分配一段時間給 scheduler rq 運行，會調用這個函數，拿取要執行的 task，但並不用將其移除串列，並執行  \lstinline{next->se.exec_start = rq->clock;} 紀錄這個 task 的開始運行時間，再之後呼叫 \lstinline {void update_curr_weighted_rr(struct rq *rq)} 非常重要，否則計算的相對運行時間會錯誤。
+		當最上層分配一段時間給 scheduler 運行，運行時會調用這個函數，並拿取要執行的 task，但並不用將其移除串列，並執行  \lstinline{next->se.exec_start = rq->clock;} 紀錄 task 的開始運行時間，再呼叫 \lstinline {void update_curr_weighted_rr(struct rq *)}。若不更新時間，則計算的相對運行時間會錯誤。
 	\end{itemize}
 	
 	\item
-	\lstinline{task_tick_weighted_rr(struct rq *rq, struct task_struct *p,int queued)} \\
+	\lstinline{task_tick_weighted_rr(struct rq *, struct task_struct *, int)} \\
 	\begin{itemize}
 		\item Weighted round-robin \\
-		當這個 scheduler 被運行時，每隔一段固定的時間會呼叫此函數。若 task 的執行量超過 scheduler 的設定，則需要更新串列，特別注意到 \lstinline{if (p->task_time_slice && --p->task_time_slice)} 在原本預設是 \lstinline{unsigned int} 型態，處理不當會造成 overflow，另一種情況會是一開始 quantum 設定為 0 所導致。 \\
-		由於要進行 round-robin，根據不同的 task 要補充不同的量 (\lstinline{p->task_time_slice = p->weighted_time_slice})，不只要 requeue 這個 task，同時需要呼叫 \lstinline{set_tsk_need_resched(p)} (參考 \lstinline{kernel/sched_rt.c} 代碼) 需要重新 呼叫 \lstinline{pick_next_task_weighted_rr(struct rq *rq)} 否則這個 task 仍然會持續佔有這一段程序。
+		當 scheduler 運行時，每隔一段固定的時間會呼叫此函數。若程序執行量超過 scheduler 的設定，則需要更新串列，特別注意到 \lstinline{if (p->task_time_slice && --p->task_time_slice)} 在原本預設是 \lstinline{unsigned int} 型態，處理不當會造成 overflow，另一種情況會是一開始 quantum 設定為 0 所導致。 \\
+		由於要進行 round-robin，根據不同的程式要補充不同的量 (\lstinline{p->task_time_slice = p->weighted_time_slice})，不只要讓這支程式重進進入串列，同時需要呼叫 \lstinline{set_tsk_need_resched(p)} (參考 \lstinline{kernel/sched_rt.c} 代碼)，藉以重新呼叫 \lstinline{pick_next_task_weighted_rr(struct rq*)}，否則這支程序會運行到結束。
 		\item Shortest Job First \\
-		在 SJF 中若按照 Weighted round-robin 的寫法且不補充 quantum，則會變成 non-preemptive SJF。相反地，若要實作 preemptive SJF，需要在 \lstinline{check_preempt_curr_weighted_rr(struct rq *rq, struct task_struct *p, int wakeflags)} 檢查 task 是不是 list head，意即是不是最高優先權，如果不是最高優先權，則呼叫 \lstinline{resched_task(p)} 即可完成。
+		在最短工作優先排程中若按照 Weighted round-robin 的寫法且不補充 quantum，則會變成 non-preemptive SJF。相反地，若要實作 preemptive SJF，需要在 \lstinline{check_preempt_curr_weighted_rr(struct rq*, struct task_struct*, int)} 檢查執行的程序是不是串列的首元素，意即是不是最高優先權，如果不是最高優先權，則呼叫 \lstinline{resched_task()} 即可完成 (詳見 Bonus RMS 的寫法)。
 	\end{itemize}
 \end{itemize}
+
+\vspace*{.1in} \noindent {\large \bfseries Bonus RMS}
+
+\begin{itemize}
+	\item 額外增加 syscall，修改三個檔案 \lstinline{unistd_32.h}, \lstinline{unistd_64.h}, \lstinline{syscall_table_32.S}。增加 Rate-monotonic scheduler 的額外週期 (period) 和 syscall 函數主題，修改兩個檔案 \lstinline{sched.h}, \lstinline{sched.c}。
+	\item 程式碼細節 \lstinline{sched_weighted_rr.c}
+		\begin{enumerate}
+			\item \lstinline{enqueue_task_weighted_rr} \\
+			使用與最短工作優先排程相同寫法，但利用週期 (period) 進行由優先權高到低排序。
+			\item \lstinline{check_preempt_curr_weighted_rr} \\
+			週期程式可能會搶之前正在運行程式，若發現運行程式的優先權低於要進入排程器的程式優先權，呼叫 \lstinline{resched_task()} 重新排程。
+			\item 其餘類同 SJF。
+		\end{enumerate}
+	\item 測試程序 \lstinline{test_rms.c}
+		\begin{itemize}
+		\item 參考 Project 1 的寫法，linux 針對每一個 thread 有各自計時的計時器，當 thread 被 context-switch 時，計時器也會隨之停止。
+		\item 利用 main thread 產生週期性程式，\lstinline{pthread_create} 並不會馬上將 thread 立即執行，迫使 main thread 的方式使用 \lstinline{sleep(1)}，以秒為單位產生週期性程式。
+		\item 測試程式中，產生三個週期性程式 $\tau_{1}(2, 10), \; \tau_{2}(4, 15), \; \tau_{3}(10, 35)$，預期結果如下圖所示：
+		\item 由於要考慮週期程式的執行時間，又能在輸出緩衝區觀察順序關係，利用 thread 的計時器，盡可能接近 1ms 才進行一次印出，但這也會造成幾毫秒的誤差，對於一支程序一秒大約印出 1000 個字元，測試程式中，將連續相同字元計數，若相同字元取用四捨五入到秒才進行印出，計時誤差部分就不予輸出。實驗結果如 Figure 3 所示。
+		\end{itemize}
+\end{itemize}
+
+\input{graph-exp3}
 
 \vspace*{.1in} \noindent {\large \bfseries 實驗結果}
 
@@ -174,8 +196,6 @@ extern int weighted_rr_time_slice;
     \end{center}
 \end{figure}
 
-\vspace*{.1in} \noindent {\large \bfseries Bonus RMS}
-
 \begin{figure}[htp]
     \begin{center}
         \includegraphics[width=400pt]{images/exp-rms.jpg}
@@ -183,8 +203,6 @@ extern int weighted_rr_time_slice;
         \label{fig: result}
     \end{center}
 \end{figure}
-
-\input{graph-exp3}
 
 \vspace*{.1in} \noindent {\large \bfseries 附錄}
 
