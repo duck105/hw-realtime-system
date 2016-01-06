@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 		targs->prio   = i;
 		targs->mychar = (char) (i+START_CHAR);
 		targs->nchars = (total_num_chars / num_threads);
-
+		printf("%c quantum = %d\n", targs->mychar, quantum);
 		if(quantum <= i)
 			printf("TIme quantum too small\n");
 		else 

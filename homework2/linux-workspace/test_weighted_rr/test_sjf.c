@@ -109,6 +109,7 @@ int main(int argc, char *argv[])
 		
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+	srand(time(NULL));
 	for (i = 0; i < num_threads; i++)
 	{
 		targs = malloc(sizeof(*targs));
