@@ -4,6 +4,7 @@
 
 \documentclass{res} 
 \usepackage{fontspec}
+\usepackage{tikz}
 \usepackage{xeCJK}
 \usepackage{listings}
 \usepackage[autostyle]{csquotes} 
@@ -172,6 +173,18 @@ extern int weighted_rr_time_slice;
         \label{fig: result}
     \end{center}
 \end{figure}
+
+\vspace*{.1in} \noindent {\large \bfseries Bonus RMS}
+
+\begin{figure}[htp]
+    \begin{center}
+        \includegraphics[width=400pt]{images/exp-rms.jpg}
+        \caption{Rate Monotonic Scheduler 執行結果}
+        \label{fig: result}
+    \end{center}
+\end{figure}
+
+\input{graph-exp3}
 
 \vspace*{.1in} \noindent {\large \bfseries 附錄}
 
